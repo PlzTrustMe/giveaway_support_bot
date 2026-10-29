@@ -1,0 +1,60 @@
+# Python bytecode and native extensions
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+
+# Build and packaging artifacts
+build/
+dist/
+.eggs/
+*.egg-info/
+*.egg
+*.whl
+
+# Virtual environments
+.venv/
+.venv.*/
+venv/
+env/
+ENV/
+__pypackages__/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Tool and test caches
+.cache/
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.pyre/
+.pytype/
+.tox/
+.nox/
+
+# Coverage reports
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Jupyter notebooks
+.ipynb_checkpoints/
+
+# Editors and IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Logs and operating system files
+*.log
+.DS_Store
+Thumbs.db
+
+# Keep uv.lock, .python-version and .env.example in Git.

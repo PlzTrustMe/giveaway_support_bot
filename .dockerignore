@@ -1,0 +1,14 @@
+.git
+.idea
+.venv
+venv
+.env
+.env.*
+dist
+.ruff_cache
+__pycache__
+*.py[cod]
+*.db*
+*.sqlite*
+*.log
+.DS_Store
