@@ -16,3 +16,10 @@ support_threads = sa.Table(
         "group_chat_id", "thread_id", name="uq_support_threads_group_thread"
     ),
 )
+
+user_languages = sa.Table(
+    "user_languages",
+    metadata,
+    sa.Column("user_id", sa.BigInteger, primary_key=True, autoincrement=False),
+    sa.Column("language_code", sa.Text, nullable=False),
+)

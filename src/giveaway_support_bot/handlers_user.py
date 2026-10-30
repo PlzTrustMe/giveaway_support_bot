@@ -7,12 +7,12 @@ from html import escape
 import asyncpg
 from aiogram import F, Router
 from aiogram.enums import ChatType
-from aiogram.exceptions import TelegramAPIError
+from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
 from aiogram.filters import CommandStart
-from aiogram.types import Message, User
+from aiogram.types import CallbackQuery, Message, User
 
-from giveaway_support_bot.i18n import translate
-from giveaway_support_bot.keyboards import ban_keyboard
+from giveaway_support_bot.i18n import LANGUAGE_PROMPT, translate
+from giveaway_support_bot.keyboards import ban_keyboard, language_keyboard
 from giveaway_support_bot.storage import Storage, SupportThread
 
 router = Router(name="users")
@@ -73,26 +73,69 @@ async def ensure_topic(
 
 @router.message(CommandStart())
 async def start(message: Message, storage: Storage, admin_group_id: int) -> None:
+    language = message.from_user.language_code
     try:
+        language = await storage.get_language(message.from_user.id) or language
         thread = await storage.get_thread(message.from_user.id, admin_group_id)
     except (asyncpg.PostgresError, OSError):
         logger.exception(
             "Could not read user block status for %s", message.from_user.id
         )
-        await message.answer(
-            translate("delivery_failed", message.from_user.language_code)
-        )
+        await message.answer(translate("delivery_failed", language))
         return
-    key = "banned" if thread and thread.is_banned else "welcome"
-    await message.answer(translate(key, message.from_user.language_code))
+    if thread and thread.is_banned:
+        await message.answer(translate("banned", language))
+        return
+    await message.answer(LANGUAGE_PROMPT, reply_markup=language_keyboard())
+
+
+@router.callback_query(F.data.in_({"lang:ru", "lang:uk", "lang:ua", "lang:en"}))
+async def select_language(
+    call: CallbackQuery, storage: Storage, admin_group_id: int
+) -> None:
+    message = call.message
+    if (
+        not isinstance(message, Message)
+        or message.chat.type != ChatType.PRIVATE
+        or message.chat.id != call.from_user.id
+    ):
+        await call.answer()
+        return
+    language = call.data.split(":", 1)[1]
+    if language == "ua":
+        language = "uk"
+    try:
+        await storage.set_language(call.from_user.id, language)
+        thread = await storage.get_thread(call.from_user.id, admin_group_id)
+        key = "banned" if thread and thread.is_banned else "welcome"
+        try:
+            await message.edit_text(translate(key, language), reply_markup=None)
+        except TelegramBadRequest as exc:
+            if "message is not modified" not in exc.message.lower():
+                raise
+    except (TelegramAPIError, asyncpg.PostgresError, OSError):
+        logger.exception("Could not select language for user %s", call.from_user.id)
+        await call.answer(translate("language_failed", language), show_alert=True)
+        return
+    await call.answer()
 
 
 @router.message()
 async def relay_user(message: Message, storage: Storage, admin_group_id: int) -> None:
+    language = message.from_user.language_code
     try:
+        selected_language = await storage.get_language(message.from_user.id)
+        language = selected_language or language
+        if selected_language is None:
+            thread = await storage.get_thread(message.from_user.id, admin_group_id)
+            if thread and thread.is_banned:
+                await message.answer(translate("banned", language))
+            else:
+                await message.answer(LANGUAGE_PROMPT, reply_markup=language_keyboard())
+            return
         thread = await ensure_topic(message, storage, admin_group_id)
         if thread.is_banned:
-            await message.answer(translate("banned", message.from_user.language_code))
+            await message.answer(translate("banned", language))
             return
         await message.bot.copy_message(
             chat_id=admin_group_id,
@@ -102,6 +145,4 @@ async def relay_user(message: Message, storage: Storage, admin_group_id: int) ->
         )
     except (TelegramAPIError, asyncpg.PostgresError, OSError):
         logger.exception("Could not relay message from user %s", message.from_user.id)
-        await message.answer(
-            translate("delivery_failed", message.from_user.language_code)
-        )
+        await message.answer(translate("delivery_failed", language))

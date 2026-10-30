@@ -1,7 +1,10 @@
-"""Automatic RU/UK/EN messages using the user's Telegram language."""
+"""RU/UK/EN messages using the user's selected language."""
+
+LANGUAGE_PROMPT = "🌐 Выберите язык / Оберіть мову / Choose your language:"
 
 TEXTS = {
     "ru": {
+        "language_failed": "Не удалось завершить выбор языка. Попробуй ещё раз.",
         "banned": "Доступ к поддержке заблокирован.",
         "welcome": (
             "Привет! Если у тебя есть вопросы, отзывы или предложения по "
@@ -12,6 +15,7 @@ TEXTS = {
         ),
     },
     "uk": {
+        "language_failed": "Не вдалося завершити вибір мови. Спробуй ще раз.",
         "banned": "Доступ до підтримки заблоковано.",
         "welcome": (
             "Привіт! Якщо маєш запитання, відгуки або пропозиції щодо "
@@ -22,6 +26,7 @@ TEXTS = {
         ),
     },
     "en": {
+        "language_failed": "Couldn't complete language selection. Please try again.",
         "banned": "Your access to support is blocked.",
         "welcome": (
             "Hi! If you have any questions, feedback or suggestions to "

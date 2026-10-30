@@ -1,4 +1,4 @@
-"""Store only Telegram user/topic routing, never message content."""
+"""Store routing, moderation and language preferences, never message content."""
 
 from dataclasses import dataclass
 
@@ -34,6 +34,21 @@ class Storage:
         if self._pool is None:
             raise RuntimeError("Storage is not connected")
         return self._pool
+
+    async def get_language(self, user_id: int) -> str | None:
+        return await self.pool.fetchval(
+            "SELECT language_code FROM user_languages WHERE user_id=$1", user_id
+        )
+
+    async def set_language(self, user_id: int, language_code: str) -> None:
+        await self.pool.execute(
+            """
+            INSERT INTO user_languages (user_id, language_code) VALUES ($1, $2)
+            ON CONFLICT (user_id) DO UPDATE SET language_code=EXCLUDED.language_code
+            """,
+            user_id,
+            language_code,
+        )
 
     async def get_thread(
         self, user_id: int, group_chat_id: int

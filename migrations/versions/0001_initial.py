@@ -23,7 +23,17 @@ def upgrade() -> None:
             "group_chat_id", "thread_id", name="uq_support_threads_group_thread"
         ),
     )
+    create_user_languages()
+
+
+def create_user_languages() -> None:
+    op.create_table(
+        "user_languages",
+        sa.Column("user_id", sa.BigInteger, primary_key=True, autoincrement=False),
+        sa.Column("language_code", sa.Text, nullable=False),
+    )
 
 
 def downgrade() -> None:
+    op.drop_table("user_languages")
     op.drop_table("support_threads")
