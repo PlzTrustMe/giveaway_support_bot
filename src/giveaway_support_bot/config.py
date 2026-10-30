@@ -11,19 +11,6 @@ from dotenv import load_dotenv
 from sqlalchemy.engine import URL, make_url
 
 
-def _parse_int_list(raw: str) -> list[int]:
-    ids: list[int] = []
-    for part in (raw or "").split(","):
-        part = part.strip()
-        if not part:
-            continue
-        try:
-            ids.append(int(part))
-        except ValueError:
-            continue
-    return ids
-
-
 @dataclass(frozen=True)
 class Settings:
     """Настройки приложения."""
@@ -32,7 +19,7 @@ class Settings:
     admin_ids: list[int]
     database_url: str
     log_level: str
-    admin_group_id: int | None
+    admin_group_id: int
 
 
 def load_database_url() -> str:
@@ -64,17 +51,30 @@ def load_settings() -> Settings:
     if not bot_token or bot_token == "PASTE_TOKEN_HERE":
         raise RuntimeError("BOT_TOKEN is required (set it in .env)")
 
-    admin_ids = _parse_int_list(os.getenv("ADMIN_IDS", "").strip())
+    try:
+        admin_ids = [
+            int(part.strip())
+            for part in os.getenv("ADMIN_IDS", "").split(",")
+            if part.strip()
+        ]
+    except ValueError as exc:
+        raise RuntimeError(
+            "ADMIN_IDS must contain Telegram user IDs separated by commas"
+        ) from exc
+    if not admin_ids:
+        raise RuntimeError(
+            "ADMIN_IDS is required (Telegram user IDs of support operators)"
+        )
     log_level = os.getenv("LOG_LEVEL", "INFO").strip().upper()
     admin_group_raw = os.getenv("ADMIN_GROUP_ID", "").strip()
-    admin_group_id: int | None
-    if admin_group_raw:
-        try:
-            admin_group_id = int(admin_group_raw)
-        except ValueError:
-            admin_group_id = None
-    else:
-        admin_group_id = None
+    if not admin_group_raw:
+        raise RuntimeError(
+            "ADMIN_GROUP_ID is required (a Telegram group with topics enabled)"
+        )
+    try:
+        admin_group_id = int(admin_group_raw)
+    except ValueError as exc:
+        raise RuntimeError("ADMIN_GROUP_ID must be a Telegram chat ID") from exc
     return Settings(
         bot_token=bot_token,
         admin_ids=admin_ids,
