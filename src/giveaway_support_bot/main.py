@@ -54,7 +54,6 @@ async def main() -> None:
             await dispatcher.start_polling(
                 bot,
                 storage=storage,
-                admin_ids=settings.admin_ids,
                 admin_group_id=settings.admin_group_id,
                 close_bot_session=False,
                 allowed_updates=dispatcher.resolve_used_update_types(),

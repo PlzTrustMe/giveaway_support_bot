@@ -16,7 +16,6 @@ class Settings:
     """Настройки приложения."""
 
     bot_token: str
-    admin_ids: list[int]
     database_url: str
     log_level: str
     admin_group_id: int
@@ -51,20 +50,6 @@ def load_settings() -> Settings:
     if not bot_token or bot_token == "PASTE_TOKEN_HERE":
         raise RuntimeError("BOT_TOKEN is required (set it in .env)")
 
-    try:
-        admin_ids = [
-            int(part.strip())
-            for part in os.getenv("ADMIN_IDS", "").split(",")
-            if part.strip()
-        ]
-    except ValueError as exc:
-        raise RuntimeError(
-            "ADMIN_IDS must contain Telegram user IDs separated by commas"
-        ) from exc
-    if not admin_ids:
-        raise RuntimeError(
-            "ADMIN_IDS is required (Telegram user IDs of support operators)"
-        )
     log_level = os.getenv("LOG_LEVEL", "INFO").strip().upper()
     admin_group_raw = os.getenv("ADMIN_GROUP_ID", "").strip()
     if not admin_group_raw:
@@ -77,7 +62,6 @@ def load_settings() -> Settings:
         raise RuntimeError("ADMIN_GROUP_ID must be a Telegram chat ID") from exc
     return Settings(
         bot_token=bot_token,
-        admin_ids=admin_ids,
         database_url=load_database_url(),
         log_level=log_level,
         admin_group_id=admin_group_id,

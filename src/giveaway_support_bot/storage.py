@@ -93,6 +93,21 @@ class Storage:
         )
         return SupportThread(**row)
 
+    async def replace_thread(
+        self, user_id: int, group_chat_id: int, thread_id: int
+    ) -> SupportThread:
+        row = await self.pool.fetchrow(
+            """
+            UPDATE support_threads SET thread_id=$1, card_message_id=NULL
+            WHERE user_id=$2 AND group_chat_id=$3
+            RETURNING user_id, group_chat_id, thread_id, card_message_id, is_banned
+            """,
+            thread_id,
+            user_id,
+            group_chat_id,
+        )
+        return SupportThread(**row)
+
     async def get_thread_by_topic(
         self, group_chat_id: int, thread_id: int
     ) -> SupportThread | None:

@@ -4,7 +4,7 @@ import logging
 
 import asyncpg
 from aiogram import F, Router
-from aiogram.enums import ChatType
+from aiogram.enums import ChatMemberStatus, ChatType
 from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
 from aiogram.types import CallbackQuery, Message
 
@@ -44,12 +44,14 @@ router.message.filter(
 async def relay_admin(
     message: Message,
     storage: Storage,
-    admin_ids: list[int],
     admin_group_id: int,
 ) -> None:
-    if message.chat.id != admin_group_id or message.from_user.id not in admin_ids:
+    if message.chat.id != admin_group_id:
         return
     try:
+        member = await message.bot.get_chat_member(admin_group_id, message.from_user.id)
+        if member.status not in (ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.CREATOR):
+            return
         thread = await storage.get_thread_by_topic(
             admin_group_id, message.message_thread_id
         )
@@ -72,12 +74,11 @@ async def relay_admin(
 
 @router.callback_query(F.data.in_({"support:ban", "support:unban"}))
 async def change_ban(
-    call: CallbackQuery, storage: Storage, admin_ids: list[int], admin_group_id: int
+    call: CallbackQuery, storage: Storage, admin_group_id: int
 ) -> None:
     message = call.message
     if (
-        call.from_user.id not in admin_ids
-        or not isinstance(message, Message)
+        not isinstance(message, Message)
         or message.chat.id != admin_group_id
         or not message.message_thread_id
     ):
@@ -85,6 +86,10 @@ async def change_ban(
         return
     is_banned = call.data == "support:ban"
     try:
+        member = await call.bot.get_chat_member(admin_group_id, call.from_user.id)
+        if member.status not in (ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.CREATOR):
+            await call.answer("Нет доступа.", show_alert=True)
+            return
         thread = await storage.get_thread_by_topic(
             admin_group_id, message.message_thread_id
         )
@@ -98,7 +103,7 @@ async def change_ban(
             is_banned,
             call.from_user.id,
         )
-    except (asyncpg.PostgresError, OSError):
+    except (TelegramAPIError, asyncpg.PostgresError, OSError):
         logger.exception("Could not update ban in topic %s", message.message_thread_id)
         await call.answer(
             "Не удалось изменить блокировку. Попробуйте ещё раз.", show_alert=True
